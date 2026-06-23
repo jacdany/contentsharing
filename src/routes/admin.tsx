@@ -322,7 +322,20 @@ function AdminPanel() {
                 >
                   {v.url}
                 </a>
-                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = prompt("Thumbnail image URL", v.thumbnail || "");
+                    if (next === null) return;
+                    const updated = videos.map((x) => x.id === v.id ? { ...x, thumbnail: next.trim() } : x);
+                    setVideos(updated);
+                    saveVideos(updated);
+                  }}
+                  className="mt-1 inline-flex items-center gap-1 rounded-md border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/20"
+                >
+                  🖼 Thumbnail
+                </button>
+                <span className="ml-1 mt-1 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-200">
                   <MousePointerClick size={12} />
                   {clicks[v.id] || 0} {(clicks[v.id] || 0) === 1 ? "click" : "clicks"}
                 </span>
