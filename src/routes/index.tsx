@@ -50,6 +50,15 @@ const SEED: Video[] = [
     duration: 0,
     createdAt: Date.now() - 1000,
   },
+  {
+    id: "seed-3",
+    title: "post 3",
+    url: "https://1024terabox.com/s/1bGpXGZ3tPEcRtfMd6csUwg",
+    thumbnail:
+      "https://dm-data.terabox.app/thumbnail/4ee1da12b39f9fde4f80e85345fd9e4e?fid=4398831369559-250528-80807161347225&time=1782205200&rt=sh&sign=FDTAER-DCb740ccc5511e5e8fedcff06b081203-eb%2FEuZmWDTwDBk3cnP9NLLxABSg%3D&expires=8h&chkv=0&chkbd=0&chkpc=&dp-logid=570483625297594678&dp-callid=0&size=c850_u580&quality=100&vuk=-&ft=video",
+    duration: 0,
+    createdAt: Date.now(),
+  },
 ];
 
 const PALETTE = [
@@ -69,13 +78,18 @@ function Home() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem("cc_videos");
-      const seeded = localStorage.getItem("cc_seeded");
-      if (raw && JSON.parse(raw).length) {
-        setVideos(JSON.parse(raw));
-      } else if (!seeded) {
-        localStorage.setItem("cc_videos", JSON.stringify(SEED));
-        localStorage.setItem("cc_seeded", "1");
-        setVideos(SEED);
+      const seedVersion = localStorage.getItem("cc_seed_v");
+      const existing: Video[] = raw ? JSON.parse(raw) : [];
+      if (seedVersion !== "3") {
+        const map = new Map<string, Video>();
+        for (const v of existing) map.set(v.id, v);
+        for (const v of SEED) if (!map.has(v.id)) map.set(v.id, v);
+        const merged = Array.from(map.values());
+        localStorage.setItem("cc_videos", JSON.stringify(merged));
+        localStorage.setItem("cc_seed_v", "3");
+        setVideos(merged);
+      } else {
+        setVideos(existing);
       }
     } catch {}
   }, []);
