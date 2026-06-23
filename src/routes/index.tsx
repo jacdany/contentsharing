@@ -146,7 +146,15 @@ function Home() {
             {filtered.map((v, i) => (
               <button
                 key={v.id}
-                onClick={() => setActive(v)}
+                onClick={() => {
+                  try {
+                    const raw = localStorage.getItem("cc_clicks");
+                    const counts: Record<string, number> = raw ? JSON.parse(raw) : {};
+                    counts[v.id] = (counts[v.id] || 0) + 1;
+                    localStorage.setItem("cc_clicks", JSON.stringify(counts));
+                  } catch {}
+                  setActive(v);
+                }}
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:rotate-[-0.5deg] hover:scale-[1.02] hover:shadow-fuchsia-500/30"
                 style={{ transformStyle: "preserve-3d" }}
               >
