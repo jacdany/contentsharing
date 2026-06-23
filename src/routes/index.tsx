@@ -57,8 +57,14 @@ const SEED: Video[] = [
     thumbnail:
       "https://dm-data.terabox.app/thumbnail/4ee1da12b39f9fde4f80e85345fd9e4e?fid=4398831369559-250528-80807161347225&time=1782205200&rt=sh&sign=FDTAER-DCb740ccc5511e5e8fedcff06b081203-eb%2FEuZmWDTwDBk3cnP9NLLxABSg%3D&expires=8h&chkv=0&chkbd=0&chkpc=&dp-logid=570483625297594678&dp-callid=0&size=c850_u580&quality=100&vuk=-&ft=video",
     duration: 0,
-    createdAt: Date.now(),
+    createdAt: Date.now() - 600,
   },
+  { id: "seed-4", title: "post 4", url: "https://nowplaytoc.com/2069353328303026177", thumbnail: "", duration: 0, createdAt: Date.now() - 500 },
+  { id: "seed-5", title: "post 5", url: "https://nowplaytoc.com/2069353283159461890", thumbnail: "", duration: 0, createdAt: Date.now() - 400 },
+  { id: "seed-6", title: "post 6", url: "https://nowplaytoc.com/2069353305263849474", thumbnail: "", duration: 0, createdAt: Date.now() - 300 },
+  { id: "seed-7", title: "post 7", url: "https://nowplaytoc.com/2069353267288215554", thumbnail: "", duration: 0, createdAt: Date.now() - 200 },
+  { id: "seed-8", title: "post 8", url: "https://nowplaytoc.com/2069353233167958017", thumbnail: "", duration: 0, createdAt: Date.now() - 100 },
+  { id: "seed-9", title: "post 9", url: "https://nowplaytoc.com/2069353222098919425", thumbnail: "", duration: 0, createdAt: Date.now() },
 ];
 
 const PALETTE = [
@@ -80,13 +86,13 @@ function Home() {
       const raw = localStorage.getItem("cc_videos");
       const seedVersion = localStorage.getItem("cc_seed_v");
       const existing: Video[] = raw ? JSON.parse(raw) : [];
-      if (seedVersion !== "3") {
+      if (seedVersion !== "4") {
         const map = new Map<string, Video>();
         for (const v of existing) map.set(v.id, v);
         for (const v of SEED) if (!map.has(v.id)) map.set(v.id, v);
         const merged = Array.from(map.values());
         localStorage.setItem("cc_videos", JSON.stringify(merged));
-        localStorage.setItem("cc_seed_v", "3");
+        localStorage.setItem("cc_seed_v", "4");
         setVideos(merged);
       } else {
         setVideos(existing);
@@ -96,7 +102,7 @@ function Home() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = [...videos].sort((a, b) => b.createdAt - a.createdAt);
+    const list = [...videos].sort((a, b) => a.createdAt - b.createdAt);
     if (!q) return list;
     return list.filter((v) => v.title.toLowerCase().includes(q));
   }, [videos, query]);
