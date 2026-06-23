@@ -78,13 +78,18 @@ function Home() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem("cc_videos");
-      const seeded = localStorage.getItem("cc_seeded");
-      if (raw && JSON.parse(raw).length) {
-        setVideos(JSON.parse(raw));
-      } else if (!seeded) {
-        localStorage.setItem("cc_videos", JSON.stringify(SEED));
-        localStorage.setItem("cc_seeded", "1");
-        setVideos(SEED);
+      const seedVersion = localStorage.getItem("cc_seed_v");
+      const existing: Video[] = raw ? JSON.parse(raw) : [];
+      if (seedVersion !== "3") {
+        const map = new Map<string, Video>();
+        for (const v of existing) map.set(v.id, v);
+        for (const v of SEED) if (!map.has(v.id)) map.set(v.id, v);
+        const merged = Array.from(map.values());
+        localStorage.setItem("cc_videos", JSON.stringify(merged));
+        localStorage.setItem("cc_seed_v", "3");
+        setVideos(merged);
+      } else {
+        setVideos(existing);
       }
     } catch {}
   }, []);
