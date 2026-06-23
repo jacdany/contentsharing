@@ -139,13 +139,29 @@ function Admin() {
 
 function AdminPanel() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [clicks, setClicks] = useState<Record<string, number>>({});
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  useEffect(() => { setVideos(loadVideos()); }, []);
+  useEffect(() => {
+    setVideos(loadVideos());
+    try {
+      const raw = localStorage.getItem("cc_clicks");
+      setClicks(raw ? JSON.parse(raw) : {});
+    } catch {}
+    const onStorage = () => {
+      try {
+        const raw = localStorage.getItem("cc_clicks");
+        setClicks(raw ? JSON.parse(raw) : {});
+      } catch {}
+    };
+    window.addEventListener("storage", onStorage);
+    const id = setInterval(onStorage, 3000);
+    return () => { window.removeEventListener("storage", onStorage); clearInterval(id); };
+  }, []);
 
   function resetForm() {
     setTitle("");
