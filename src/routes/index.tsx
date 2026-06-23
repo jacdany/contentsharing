@@ -50,6 +50,15 @@ const SEED: Video[] = [
     duration: 0,
     createdAt: Date.now() - 1000,
   },
+  {
+    id: "seed-3",
+    title: "post 3",
+    url: "https://1024terabox.com/s/1bGpXGZ3tPEcRtfMd6csUwg",
+    thumbnail:
+      "https://dm-data.terabox.app/thumbnail/4ee1da12b39f9fde4f80e85345fd9e4e?fid=4398831369559-250528-80807161347225&time=1782205200&rt=sh&sign=FDTAER-DCb740ccc5511e5e8fedcff06b081203-eb%2FEuZmWDTwDBk3cnP9NLLxABSg%3D&expires=8h&chkv=0&chkbd=0&chkpc=&dp-logid=570483625297594678&dp-callid=0&size=c850_u580&quality=100&vuk=-&ft=video",
+    duration: 0,
+    createdAt: Date.now(),
+  },
 ];
 
 const PALETTE = [
