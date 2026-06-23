@@ -102,7 +102,7 @@ function Home() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = [...videos].sort((a, b) => b.createdAt - a.createdAt);
+    const list = [...videos].sort((a, b) => a.createdAt - b.createdAt);
     if (!q) return list;
     return list.filter((v) => v.title.toLowerCase().includes(q));
   }, [videos, query]);
