@@ -86,13 +86,13 @@ function Home() {
       const raw = localStorage.getItem("cc_videos");
       const seedVersion = localStorage.getItem("cc_seed_v");
       const existing: Video[] = raw ? JSON.parse(raw) : [];
-      if (seedVersion !== "3") {
+      if (seedVersion !== "4") {
         const map = new Map<string, Video>();
         for (const v of existing) map.set(v.id, v);
         for (const v of SEED) if (!map.has(v.id)) map.set(v.id, v);
         const merged = Array.from(map.values());
         localStorage.setItem("cc_videos", JSON.stringify(merged));
-        localStorage.setItem("cc_seed_v", "3");
+        localStorage.setItem("cc_seed_v", "4");
         setVideos(merged);
       } else {
         setVideos(existing);
