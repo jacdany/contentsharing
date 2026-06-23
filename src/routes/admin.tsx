@@ -314,7 +314,18 @@ function AdminPanel() {
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{v.title}</p>
-                <p className="truncate text-xs text-white/50">{v.url}</p>
+                <a
+                  href={v.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-xs text-fuchsia-300/80 underline-offset-2 hover:text-fuchsia-200 hover:underline"
+                >
+                  {v.url}
+                </a>
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-200">
+                  <MousePointerClick size={12} />
+                  {clicks[v.id] || 0} {(clicks[v.id] || 0) === 1 ? "click" : "clicks"}
+                </span>
               </div>
               <button
                 onClick={() => startEdit(v)}
