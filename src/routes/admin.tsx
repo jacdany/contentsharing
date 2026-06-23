@@ -31,7 +31,7 @@ function saveVideos(v: Video[]) {
 }
 
 async function analyzeVideo(url: string): Promise<{ duration: number; thumbnail: string }> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const video = document.createElement("video");
     video.crossOrigin = "anonymous";
     video.preload = "metadata";
@@ -41,8 +41,8 @@ async function analyzeVideo(url: string): Promise<{ duration: number; thumbnail:
 
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error("Timed out loading video metadata. URL may not be a direct video file."));
-    }, 20000);
+      resolve({ duration: 0, thumbnail: "" });
+    }, 12000);
 
     const cleanup = () => {
       clearTimeout(timeout);
@@ -51,7 +51,6 @@ async function analyzeVideo(url: string): Promise<{ duration: number; thumbnail:
 
     video.onloadedmetadata = () => {
       const duration = video.duration || 0;
-      // Seek a bit in to grab a frame
       const seekTo = Math.min(1, Math.max(0, duration / 10));
       video.currentTime = seekTo;
     };
@@ -74,15 +73,15 @@ async function analyzeVideo(url: string): Promise<{ duration: number; thumbnail:
         const duration = video.duration || 0;
         cleanup();
         resolve({ duration, thumbnail });
-      } catch (e) {
+      } catch {
         cleanup();
-        reject(e);
+        resolve({ duration: 0, thumbnail: "" });
       }
     };
 
     video.onerror = () => {
       cleanup();
-      reject(new Error("Could not load video. The URL may not be a direct, playable video file."));
+      resolve({ duration: 0, thumbnail: "" });
     };
   });
 }
@@ -98,7 +97,11 @@ function Admin() {
 
   if (!authed) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070712] p-4 text-white">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-fuchsia-600/40 blur-3xl" />
+          <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-cyan-500/30 blur-3xl" />
+        </div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -109,23 +112,20 @@ function Admin() {
               setErr("Incorrect password");
             }
           }}
-          className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm"
+          className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-white/[0.04] p-7 shadow-2xl backdrop-blur-xl"
         >
-          <h1 className="text-lg font-semibold">Admin access</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Enter password to continue.</p>
+          <h1 className="bg-gradient-to-r from-fuchsia-400 to-amber-300 bg-clip-text text-xl font-bold text-transparent">Admin access</h1>
+          <p className="mt-1 text-sm text-white/60">Enter password to continue.</p>
           <input
             type="password"
             value={pw}
-            onChange={(e) => {
-              setPw(e.target.value);
-              setErr("");
-            }}
-            className="mt-4 h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            onChange={(e) => { setPw(e.target.value); setErr(""); }}
+            className="mt-4 h-11 w-full rounded-lg border border-white/15 bg-white/5 px-3 text-sm text-white placeholder-white/40 outline-none focus:border-fuchsia-400/60 focus:ring-2 focus:ring-fuchsia-500/30"
             placeholder="Password"
             autoFocus
           />
-          {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
-          <button className="mt-4 h-10 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:opacity-90">
+          {err && <p className="mt-2 text-sm text-rose-400">{err}</p>}
+          <button className="mt-5 h-11 w-full rounded-lg bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/30 hover:opacity-95">
             Unlock
           </button>
         </form>
@@ -140,12 +140,17 @@ function AdminPanel() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  useEffect(() => {
-    setVideos(loadVideos());
-  }, []);
+  useEffect(() => { setVideos(loadVideos()); }, []);
+
+  function resetForm() {
+    setTitle("");
+    setUrl("");
+    setEditingId(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -156,101 +161,153 @@ function AdminPanel() {
     }
     setBusy(true);
     try {
-      const { duration, thumbnail } = await analyzeVideo(url.trim());
-      const next: Video = {
-        id: crypto.randomUUID(),
-        title: title.trim(),
-        url: url.trim(),
-        thumbnail,
-        duration,
-        createdAt: Date.now(),
-      };
-      const updated = [next, ...videos];
-      setVideos(updated);
-      saveVideos(updated);
-      setTitle("");
-      setUrl("");
-      setMsg({ type: "ok", text: `Posted. Duration ${Math.round(duration)}s.` });
-    } catch (e: any) {
-      setMsg({ type: "err", text: e?.message || "Failed to analyze video." });
+      if (editingId) {
+        const existing = videos.find((v) => v.id === editingId);
+        const urlChanged = existing && existing.url !== url.trim();
+        let duration = existing?.duration ?? 0;
+        let thumbnail = existing?.thumbnail ?? "";
+        if (urlChanged) {
+          const r = await analyzeVideo(url.trim());
+          duration = r.duration;
+          thumbnail = r.thumbnail;
+        }
+        const updated = videos.map((v) =>
+          v.id === editingId ? { ...v, title: title.trim(), url: url.trim(), duration, thumbnail } : v
+        );
+        setVideos(updated);
+        saveVideos(updated);
+        setMsg({ type: "ok", text: "Post updated." });
+      } else {
+        const { duration, thumbnail } = await analyzeVideo(url.trim());
+        const next: Video = {
+          id: crypto.randomUUID(),
+          title: title.trim(),
+          url: url.trim(),
+          thumbnail,
+          duration,
+          createdAt: Date.now(),
+        };
+        const updated = [next, ...videos];
+        setVideos(updated);
+        saveVideos(updated);
+        setMsg({ type: "ok", text: "Post added." });
+      }
+      resetForm();
     } finally {
       setBusy(false);
     }
   }
 
+  function startEdit(v: Video) {
+    setEditingId(v.id);
+    setTitle(v.title);
+    setUrl(v.url);
+    setMsg(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function remove(id: string) {
+    if (!confirm("Delete this post?")) return;
     const updated = videos.filter((v) => v.id !== id);
     setVideos(updated);
     saveVideos(updated);
+    if (editingId === id) resetForm();
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 text-foreground">
-      <div className="mx-auto max-w-3xl">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#070712] p-4 text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-fuchsia-600/25 blur-3xl" />
+        <div className="absolute top-1/2 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-3xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Admin — content creater</h1>
+          <h1 className="bg-gradient-to-r from-fuchsia-400 via-pink-400 to-amber-300 bg-clip-text text-2xl font-extrabold text-transparent">
+            Admin — content creater
+          </h1>
           <button
-            onClick={() => {
-              sessionStorage.removeItem("cc_admin");
-              location.reload();
-            }}
-            className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent"
+            onClick={() => { sessionStorage.removeItem("cc_admin"); location.reload(); }}
+            className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
           >
             Sign out
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-3 rounded-xl border border-border bg-card p-5">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl backdrop-blur-xl">
+          <h2 className="text-sm font-semibold text-white/80">{editingId ? "Edit post" : "New post"}</h2>
           <div>
-            <label className="text-sm font-medium">Title</label>
+            <label className="text-sm font-medium text-white/80">Title</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              className="mt-1 h-10 w-full rounded-lg border border-white/15 bg-white/5 px-3 text-sm outline-none focus:border-fuchsia-400/60 focus:ring-2 focus:ring-fuchsia-500/30"
               placeholder="Video title"
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Video URL</label>
+            <label className="text-sm font-medium text-white/80">Video URL</label>
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              placeholder="https://example.com/video.mp4"
+              className="mt-1 h-10 w-full rounded-lg border border-white/15 bg-white/5 px-3 text-sm outline-none focus:border-fuchsia-400/60 focus:ring-2 focus:ring-fuchsia-500/30"
+              placeholder="https://example.com/video.mp4 or share link"
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Must be a direct, playable video URL (e.g. .mp4). Duration and thumbnail are auto-extracted.
+            <p className="mt-1 text-xs text-white/50">
+              Direct video files (.mp4) get auto duration & thumbnail. Share links still post but without preview.
             </p>
           </div>
           {msg && (
-            <p className={`text-sm ${msg.type === "ok" ? "text-green-600" : "text-destructive"}`}>{msg.text}</p>
+            <p className={`text-sm ${msg.type === "ok" ? "text-emerald-400" : "text-rose-400"}`}>{msg.text}</p>
           )}
-          <button
-            disabled={busy}
-            className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? "Analyzing..." : "Post video"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              disabled={busy}
+              className="h-10 rounded-lg bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 px-5 text-sm font-semibold shadow-lg shadow-fuchsia-500/30 hover:opacity-95 disabled:opacity-50"
+            >
+              {busy ? "Saving..." : editingId ? "Update post" : "Add post"}
+            </button>
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="h-10 rounded-lg border border-white/15 bg-white/5 px-4 text-sm hover:bg-white/10"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
 
-        <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h2 className="mt-8 text-xs font-semibold uppercase tracking-widest text-white/50">
           Posted videos ({videos.length})
         </h2>
         <ul className="mt-3 space-y-2">
           {videos.map((v) => (
-            <li key={v.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+            <li
+              key={v.id}
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur transition hover:border-fuchsia-400/30"
+            >
               {v.thumbnail ? (
-                <img src={v.thumbnail} alt="" className="h-14 w-24 rounded object-cover" />
+                <img src={v.thumbnail} alt="" className="h-14 w-24 rounded-md object-cover" />
               ) : (
-                <div className="h-14 w-24 rounded bg-muted" />
+                <div className="flex h-14 w-24 items-center justify-center rounded-md bg-gradient-to-br from-fuchsia-500 to-indigo-600">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
+                </div>
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{v.title}</p>
-                <p className="truncate text-xs text-muted-foreground">{v.url}</p>
+                <p className="truncate text-xs text-white/50">{v.url}</p>
               </div>
               <button
+                onClick={() => startEdit(v)}
+                className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 text-xs hover:bg-white/10"
+              >
+                Edit
+              </button>
+              <button
                 onClick={() => remove(v.id)}
-                className="rounded-md border border-input px-2 py-1 text-xs hover:bg-accent"
+                className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs text-rose-300 hover:bg-rose-500/20"
               >
                 Delete
               </button>

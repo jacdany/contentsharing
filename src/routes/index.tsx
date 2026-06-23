@@ -21,7 +21,7 @@ type Video = {
 };
 
 function formatDuration(s: number) {
-  if (!isFinite(s) || s <= 0) return "--:--";
+  if (!isFinite(s) || s <= 0) return "";
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = Math.floor(s % 60);
@@ -29,16 +29,54 @@ function formatDuration(s: number) {
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
 }
 
+function isDirectVideo(url: string) {
+  return /\.(mp4|webm|mov|m3u8|ogg)(\?|$)/i.test(url);
+}
+
+const SEED: Video[] = [
+  {
+    id: "seed-1",
+    title: "post 1",
+    url: "https://nowplaytoc.com/2069348606170763266",
+    thumbnail: "",
+    duration: 0,
+    createdAt: Date.now() - 2000,
+  },
+  {
+    id: "seed-2",
+    title: "post 2",
+    url: "https://nowplaytoc.com/2069348534511214594",
+    thumbnail: "",
+    duration: 0,
+    createdAt: Date.now() - 1000,
+  },
+];
+
+const PALETTE = [
+  "from-fuchsia-500 via-purple-600 to-indigo-700",
+  "from-amber-400 via-orange-500 to-rose-600",
+  "from-emerald-400 via-teal-500 to-cyan-600",
+  "from-sky-400 via-blue-600 to-indigo-700",
+  "from-pink-500 via-rose-500 to-red-600",
+  "from-lime-400 via-emerald-500 to-teal-600",
+];
+
 function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [query, setQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [active, setActive] = useState<Video | null>(null);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("cc_videos");
-      if (raw) setVideos(JSON.parse(raw));
+      const seeded = localStorage.getItem("cc_seeded");
+      if (raw && JSON.parse(raw).length) {
+        setVideos(JSON.parse(raw));
+      } else if (!seeded) {
+        localStorage.setItem("cc_videos", JSON.stringify(SEED));
+        localStorage.setItem("cc_seeded", "1");
+        setVideos(SEED);
+      }
     } catch {}
   }, []);
 
@@ -50,58 +88,69 @@ function Home() {
   }, [videos, query]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <button
-            onClick={() => setShowSearch((s) => !s)}
-            aria-label="Search"
-            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#070712] text-white">
+      {/* animated background blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-fuchsia-600/30 blur-3xl" />
+        <div className="absolute top-40 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl" />
+      </div>
+
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#070712]/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4">
+          <h1 className="flex-1 text-center text-2xl font-extrabold tracking-tight bg-gradient-to-r from-fuchsia-400 via-pink-400 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(236,72,153,0.35)]">
+            content creater
+          </h1>
+          <div className="relative ml-auto">
+            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/60" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-          </button>
-          {showSearch && (
             <input
-              autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search videos..."
-              className="h-9 w-full max-w-xs rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Search videos"
+              className="h-10 w-44 rounded-full border border-white/15 bg-white/5 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-all focus:w-60 focus:border-fuchsia-400/60 focus:bg-white/10 focus:ring-2 focus:ring-fuchsia-500/30 sm:w-56"
             />
-          )}
-          <h1 className="ml-auto text-lg font-semibold tracking-tight">content creater</h1>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="relative mx-auto max-w-6xl px-4 py-10" style={{ perspective: "1200px" }}>
         {filtered.length === 0 ? (
-          <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
+          <div className="flex min-h-[50vh] items-center justify-center text-white/60">
             No videos yet.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((v) => (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((v, i) => (
               <button
                 key={v.id}
                 onClick={() => setActive(v)}
-                className="group overflow-hidden rounded-xl border border-border bg-card text-left transition hover:shadow-lg"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:rotate-[-0.5deg] hover:scale-[1.02] hover:shadow-fuchsia-500/30"
+                style={{ transformStyle: "preserve-3d" }}
               >
-                <div className="relative aspect-video bg-muted">
+                <div className="relative aspect-video overflow-hidden">
                   {v.thumbnail ? (
-                    <img src={v.thumbnail} alt={v.title} className="h-full w-full object-cover" />
+                    <img src={v.thumbnail} alt={v.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">No preview</div>
+                    <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${PALETTE[i % PALETTE.length]}`}>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="white" className="drop-shadow-lg opacity-90 transition-transform duration-500 group-hover:scale-125">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
                   )}
-                  <span className="absolute bottom-2 right-2 rounded bg-black/75 px-1.5 py-0.5 text-xs font-medium text-white">
-                    {formatDuration(v.duration)}
-                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  {formatDuration(v.duration) && (
+                    <span className="absolute bottom-2 right-2 rounded-md bg-black/80 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur">
+                      {formatDuration(v.duration)}
+                    </span>
+                  )}
                 </div>
-                <div className="p-3">
-                  <h3 className="line-clamp-2 text-sm font-medium">{v.title}</h3>
+                <div className="p-4">
+                  <h3 className="line-clamp-2 text-sm font-semibold text-white">{v.title}</h3>
                 </div>
+                <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/0 transition group-hover:ring-fuchsia-400/40" />
               </button>
             ))}
           </div>
@@ -110,24 +159,43 @@ function Home() {
 
       {active && (
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
           onClick={() => setActive(null)}
         >
           <div
-            className="w-full max-w-4xl overflow-hidden rounded-xl bg-card"
+            className="w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d1a] shadow-[0_30px_120px_-20px_rgba(236,72,153,0.45)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="aspect-video bg-black">
-              <video src={active.url} controls autoPlay className="h-full w-full" />
+              {isDirectVideo(active.url) ? (
+                <video src={active.url} controls autoPlay className="h-full w-full" />
+              ) : (
+                <iframe
+                  src={active.url}
+                  className="h-full w-full"
+                  allow="autoplay; fullscreen; encrypted-media"
+                  allowFullScreen
+                />
+              )}
             </div>
             <div className="flex items-center justify-between gap-3 p-4">
               <h2 className="text-base font-semibold">{active.title}</h2>
-              <button
-                onClick={() => setActive(null)}
-                className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent"
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                <a
+                  href={active.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                >
+                  Open
+                </a>
+                <button
+                  onClick={() => setActive(null)}
+                  className="rounded-md bg-gradient-to-r from-fuchsia-500 to-pink-500 px-3 py-1.5 text-sm font-medium hover:opacity-90"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
